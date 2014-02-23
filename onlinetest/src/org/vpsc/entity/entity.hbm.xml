@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE hibernate-mapping SYSTEM
+ "http://www.hibernate.org/dtd/hibernate-mapping-3.0.dtd">
+<hibernate-mapping package="org.vpsc.entity">
+	<class name="UserDetails" table="user_details">
+		<id column="userid" name="userID">
+		<generator class="increment">
+		
+		</generator>
+		</id>
+		<property column="first_name" name="firstName"></property>
+		<property column="last_name" name="lastName"></property>
+		<property column="dob" name="dob" type="date"></property>
+		<property column="email" name="email"></property>
+		<property column="phone" name="phone"></property>
+		<property column="city" name="city"></property>
+	</class>
+	
+	<class name="Login" table="login">
+	<id column="userid" name="userID">
+		</id>
+		<property column="password" name="password"></property>
+    </class>
+    
+    <class name="Group" table="groups">
+	<id column="group_number" name="groupNumber">
+	 <generator class="native" />
+		</id>
+		<property column="group_name" name="groupName"></property>
+		<set name="category" table="category"  inverse="true" lazy="true" fetch="select">
+			<key>
+				<column name="group_number" ></column>
+			</key>
+			<one-to-many class="Category"/>
+		</set>
+    </class>
+    
+    <class name="Category" table="category">
+    <id name="categoryNumber" column="category_number">
+	 <generator class="native" />
+    </id>
+       <property name="categoryName" column="category_name"></property>
+  		<many-to-one name="group" class="Group" fetch="select">
+            <column name="group_number"/>
+        </many-to-one>
+ 
+    </class>
+    
+    <class name="Question" table="question">
+    <id name="questionNumber" column="question_number">
+	 <generator class="native" />
+    </id>
+       <property name="questionName" column="question_name"></property>
+       <property name="option1" column="option1"></property>
+       <property name="option2" column="option2"></property>
+       <property name="option3" column="option3"></property>
+       <property name="option4" column="option4"></property>
+       <property name="answer" column="answer"></property>
+       <property name="description" column="description"></property>
+       <property name="reason" column="reason"></property>
+       <property name="reference" column="reference"></property>
+     	<many-to-one name="category" class="Category" fetch="select">
+            <column name="category_number"/>
+        </many-to-one>
+    </class>
+    
+      <class name="TestDetails" table="test_details">
+    <id name="testNumber" column="test_number">
+	 <generator class="native" />
+    </id>
+       <property name="testTitle" column="test_title"></property>
+       <property name="mark" column="mark"></property>
+       <property name="numberOfQuesiton" column="number_of_questions"></property>
+    </class>
+    
+    
+    <class name="Employee" table="EMPLOYEE">
+        <id name="employeeId" column="EMPLOYEE_ID">
+            <generator class="native" />
+        </id>
+ 
+        <property name="firstname" />
+        <property name="lastname" column="lastname" />
+        <property name="birthDate" type="date" column="birth_date" />
+        <property name="cellphone" column="cell_phone" />
+ 
+ 
+        <many-to-one name="department" class="Department" fetch="select">
+            <column name="department_id" not-null="true" />
+        </many-to-one>
+ 
+    </class>
+    <class name="Department" table="DEPARTMENT">
+ 
+        <id name="departmentId" type="java.lang.Long" column="DEPARTMENT_ID" >
+            <generator class="native" />
+        </id>
+         
+        <property name="departmentName" column="DEPT_NAME"/>
+ 
+        <set name="employees" table="employee"
+                inverse="true" lazy="true" fetch="select">
+            <key>
+                <column name="department_id" not-null="true" />
+            </key>
+            <one-to-many class="Employee" />
+        </set>
+                 
+    </class>
+</hibernate-mapping>

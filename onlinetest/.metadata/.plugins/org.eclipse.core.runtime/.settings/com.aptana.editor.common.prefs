@@ -1,0 +1,11 @@
+#Sun Feb 23 15:02:36 IST 2014
+OUTGOING_COLOR=235,235,235
+AbstractTextEditor.Color.Background.SystemDefault=false
+AbstractTextEditor.Color.Foreground.SystemDefault=false
+AbstractTextEditor.Color.Foreground=248,248,248
+currentLineColor=27,27,27
+AbstractTextEditor.Color.SelectionForeground.SystemDefault=false
+AbstractTextEditor.Color.Background=20,20,20
+INCOMING_COLOR=235,235,235
+eclipse.preferences.version=1
+AbstractTextEditor.Color.SelectionForeground=248,248,248
