@@ -101,8 +101,8 @@
 
         async function fetchQuestions() {
             try {
-                // Use a relative URL, which works when the page is served by the Flask app
-                const response = await fetch('/api/questions');
+                // Point to the full URL of your local Flask server
+                const response = await fetch('http://127.0.0.1:5000/api/questions');
                 if (!response.ok) {
                     throw new Error('Network response was not ok');
                 }
@@ -151,13 +151,17 @@
             questionText.textContent = question.question;
             optionsContainer.innerHTML = '';
             
-            const options = [question.option1, question.option2, question.option3, question.option4];
+            // Now includes option5
+            const options = [question.option1, question.option2, question.option3, question.option4, question.option5];
             options.forEach(option => {
-                const button = document.createElement('button');
-                button.textContent = option;
-                button.classList.add('quiz-option', 'p-4', 'border-2', 'rounded-lg', 'text-left', 'transition', 'duration-200', 'hover:bg-blue-100');
-                button.onclick = () => selectOption(button, option);
-                optionsContainer.appendChild(button);
+                // Only create a button if the option exists and is not empty
+                if (option && option.toString().trim() !== '') {
+                    const button = document.createElement('button');
+                    button.textContent = option;
+                    button.classList.add('quiz-option', 'p-4', 'border-2', 'rounded-lg', 'text-left', 'transition', 'duration-200', 'hover:bg-blue-100');
+                    button.onclick = () => selectOption(button, option);
+                    optionsContainer.appendChild(button);
+                }
             });
             nextBtn.disabled = true;
         }
@@ -165,7 +169,7 @@
         function selectOption(button, selectedOption) {
             document.querySelectorAll('.quiz-option').forEach(btn => {
                 btn.classList.remove('selected');
-                btn.disabled = true; // Disable other options
+                btn.disabled = true;
             });
             button.classList.add('selected');
             userAnswers[currentQuestionIndex] = selectedOption;
@@ -187,8 +191,8 @@
             resultScreen.classList.remove('hidden');
 
             try {
-                 // Use a relative URL for the submit endpoint
-                const response = await fetch('/api/submit', {
+                // Point to the full URL of your local Flask server
+                const response = await fetch('http://127.0.0.1:5000/api/submit', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ answers: userAnswers, questions: questions })
