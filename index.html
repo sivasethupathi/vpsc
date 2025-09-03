@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mock Test Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .quiz-option.selected {
+            background-color: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+        }
+        .quiz-option.correct {
+            background-color: #22c55e;
+            color: white;
+            border-color: #22c55e;
+        }
+        .quiz-option.incorrect {
+            background-color: #ef4444;
+            color: white;
+            border-color: #ef4444;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <div id="app" class="container mx-auto p-4 md:p-8 max-w-4xl">
+        <!-- Header -->
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-900">Mock Test Platform</h1>
+            <p class="text-lg text-gray-600 mt-2">Test your knowledge with our quiz!</p>
+        </header>
+
+        <!-- Start Screen -->
+        <div id="start-screen" class="bg-white p-8 rounded-2xl shadow-lg text-center">
+            <h2 class="text-2xl font-semibold mb-4">Welcome to the Mock Test!</h2>
+            <p class="mb-6 text-gray-700">You will have 5 minutes to answer 10 questions. Click the button below to start.</p>
+            <button id="start-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-8 rounded-lg transition duration-300 text-lg">
+                Start Test
+            </button>
+        </div>
+
+        <!-- Quiz Screen -->
+        <div id="quiz-screen" class="hidden bg-white p-8 rounded-2xl shadow-lg">
+            <div class="flex justify-between items-center mb-6">
+                <div id="question-counter" class="text-lg font-semibold">Question 1/10</div>
+                <div id="timer" class="text-lg font-bold bg-gray-200 px-4 py-2 rounded-lg">05:00</div>
+            </div>
+            <div id="quiz-content">
+                <h2 id="question-text" class="text-2xl font-semibold mb-6"></h2>
+                <div id="options-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Options will be dynamically inserted here -->
+                </div>
+            </div>
+            <div class="mt-8 text-right">
+                <button id="next-btn" class="bg-gray-800 hover:bg-gray-900 text-white font-bold py-2 px-6 rounded-lg transition duration-300">
+                    Next
+                </button>
+            </div>
+        </div>
+
+        <!-- Result Screen -->
+        <div id="result-screen" class="hidden bg-white p-8 rounded-2xl shadow-lg text-center">
+            <h2 class="text-3xl font-bold mb-4">Test Completed!</h2>
+            <p class="text-xl mb-2">Your Score:</p>
+            <div id="score" class="text-5xl font-extrabold text-blue-500 mb-6"></div>
+            <div id="summary" class="text-left space-y-4">
+                <!-- Summary of correct/incorrect answers will be here -->
+            </div>
+            <button id="restart-btn" class="mt-8 bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-8 rounded-lg transition duration-300 text-lg">
+                Try Again
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const startScreen = document.getElementById('start-screen');
+        const quizScreen = document.getElementById('quiz-screen');
+        const resultScreen = document.getElementById('result-screen');
+        const startBtn = document.getElementById('start-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const restartBtn = document.getElementById('restart-btn');
+        const questionCounter = document.getElementById('question-counter');
+        const timerEl = document.getElementById('timer');
+        const questionText = document.getElementById('question-text');
+        const optionsContainer = document.getElementById('options-container');
+        const scoreEl = document.getElementById('score');
+        const summaryEl = document.getElementById('summary');
+
+        let questions = [];
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let userAnswers = [];
+        let timer;
+        let timeLeft = 300; // 5 minutes in seconds
+
+        async function fetchQuestions() {
+            try {
+                // Use a relative URL, which works when the page is served by the Flask app
+                const response = await fetch('/api/questions');
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                questions = await response.json();
+            } catch (error) {
+                console.error('Failed to fetch questions:', error);
+                questionText.innerHTML = '<p class="text-red-500">Failed to load questions. Please ensure the Python server (`app.py`) is running and you are accessing this page through the server\'s URL (e.g., http://127.0.0.1:5000), not by opening the HTML file directly.</p>';
+            }
+        }
+        
+        function startTimer() {
+            timer = setInterval(() => {
+                timeLeft--;
+                const minutes = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+                const seconds = (timeLeft % 60).toString().padStart(2, '0');
+                timerEl.textContent = `${minutes}:${seconds}`;
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    endQuiz();
+                }
+            }, 1000);
+        }
+
+        function startQuiz() {
+            startScreen.classList.add('hidden');
+            quizScreen.classList.remove('hidden');
+            currentQuestionIndex = 0;
+            score = 0;
+            userAnswers = [];
+            timeLeft = 300;
+            fetchQuestions().then(() => {
+                if(questions.length > 0) {
+                    displayQuestion();
+                    startTimer();
+                }
+            });
+        }
+
+        function displayQuestion() {
+            if (currentQuestionIndex >= questions.length) {
+                endQuiz();
+                return;
+            }
+            const question = questions[currentQuestionIndex];
+            questionCounter.textContent = `Question ${currentQuestionIndex + 1}/${questions.length}`;
+            questionText.textContent = question.question;
+            optionsContainer.innerHTML = '';
+            
+            const options = [question.option1, question.option2, question.option3, question.option4];
+            options.forEach(option => {
+                const button = document.createElement('button');
+                button.textContent = option;
+                button.classList.add('quiz-option', 'p-4', 'border-2', 'rounded-lg', 'text-left', 'transition', 'duration-200', 'hover:bg-blue-100');
+                button.onclick = () => selectOption(button, option);
+                optionsContainer.appendChild(button);
+            });
+            nextBtn.disabled = true;
+        }
+
+        function selectOption(button, selectedOption) {
+            document.querySelectorAll('.quiz-option').forEach(btn => {
+                btn.classList.remove('selected');
+                btn.disabled = true; // Disable other options
+            });
+            button.classList.add('selected');
+            userAnswers[currentQuestionIndex] = selectedOption;
+            nextBtn.disabled = false;
+        }
+
+        function showNextQuestion() {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < questions.length) {
+                displayQuestion();
+            } else {
+                endQuiz();
+            }
+        }
+
+        async function endQuiz() {
+            clearInterval(timer);
+            quizScreen.classList.add('hidden');
+            resultScreen.classList.remove('hidden');
+
+            try {
+                 // Use a relative URL for the submit endpoint
+                const response = await fetch('/api/submit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ answers: userAnswers, questions: questions })
+                });
+                const result = await response.json();
+                score = result.score;
+                const summary = result.summary;
+
+                scoreEl.textContent = `${score}/${questions.length}`;
+                summaryEl.innerHTML = `<h3 class="text-xl font-semibold mb-4 border-b pb-2">Review Your Answers</h3>`;
+                summary.forEach((item, index) => {
+                    const questionDiv = document.createElement('div');
+                    questionDiv.classList.add('p-4', 'rounded-lg', item.correct ? 'bg-green-100' : 'bg-red-100');
+                    questionDiv.innerHTML = `
+                        <p class="font-semibold">${index + 1}. ${item.question}</p>
+                        <p>Your answer: <span class="font-bold ${item.correct ? 'text-green-800' : 'text-red-800'}">${item.user_answer || "Not Answered"}</span></p>
+                        ${!item.correct ? `<p>Correct answer: <span class="font-bold text-green-800">${item.correct_answer}</span></p>` : ''}
+                    `;
+                    summaryEl.appendChild(questionDiv);
+                });
+
+            } catch (error) {
+                console.error('Error submitting answers:', error);
+                summaryEl.textContent = 'Could not retrieve results. Please try again.';
+            }
+        }
+
+        startBtn.addEventListener('click', startQuiz);
+        nextBtn.addEventListener('click', showNextQuestion);
+        restartBtn.addEventListener('click', () => {
+            resultScreen.classList.add('hidden');
+            startScreen.classList.remove('hidden');
+        });
+
+    </script>
+</body>
+</html>
+
