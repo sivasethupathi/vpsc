@@ -1,91 +1,55 @@
-from flask import Flask, jsonify, request, send_from_directory
-from flask_cors import CORS
 import pandas as pd
+import random
+import json
+from http.server import BaseHTTPRequestHandler
+import os
 
-app = Flask(__name__, static_folder='.', static_url_path='')
-CORS(app)
+class handler(BaseHTTPRequestHandler):
 
-EXCEL_FILE = 'questions.xlsx'
+    def do_GET(self):
+        # Allow requests from any origin (CORS)
+        self.send_response(200)
+        self.send_header('Content-type', 'application/json')
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.end_headers()
 
-try:
-    # Use openpyxl for .xlsx files
-    ALL_QUESTIONS_DF = pd.read_excel(EXCEL_FILE, engine='openpyxl')
-    # Convert all columns to string to avoid data type issues
-    for col in ALL_QUESTIONS_DF.columns:
-        ALL_QUESTIONS_DF[col] = ALL_QUESTIONS_DF[col].astype(str)
-    ANSWER_LOOKUP = ALL_QUESTIONS_DF.set_index('question')['answer'].to_dict()
-except FileNotFoundError:
-    ALL_QUESTIONS_DF = None
-    ANSWER_LOOKUP = {}
-except Exception as e:
-    print(f"Error reading Excel file: {e}")
-    ALL_QUESTIONS_DF = None
-    ANSWER_LOOKUP = {}
+        try:
+            # The Excel file should be in the same directory as this Python script.
+            # Vercel copies files from the root into the lambda environment.
+            # We assume 'questions.xlsx' is in the root of the project.
+            file_path = 'questions.xlsx'
+            
+            # Check if file exists
+            if not os.path.exists(file_path):
+                 raise FileNotFoundError(f"The file '{file_path}' was not found in the deployment environment.")
 
+            # Read the Excel file
+            df = pd.read_excel(file_path)
 
-@app.route('/')
-def serve_index():
-    """Serves the main HTML file."""
-    return send_from_directory('.', 'index.html')
+            # Ensure required columns exist
+            required_cols = ['question', 'option_a', 'option_b', 'option_c', 'option_d', 'correct_answer']
+            if not all(col in df.columns for col in required_cols):
+                raise ValueError("Excel file is missing one of the required columns: " + ", ".join(required_cols))
 
-@app.route('/api/questions', methods=['GET'])
-def get_questions():
-    """API endpoint to get 10 random questions from a larger pool."""
-    if ALL_QUESTIONS_DF is None or ALL_QUESTIONS_DF.empty:
-        return jsonify({"error": "Question file not found or is empty"}), 500
-    
-    # Determine the number of questions to sample
-    num_questions = min(10, len(ALL_QUESTIONS_DF))
-    questions_sample_df = ALL_QUESTIONS_DF.sample(n=num_questions)
+            # Convert dataframe to a list of dictionaries
+            all_questions = df.to_dict('records')
 
-    # Define the columns to send to the frontend, including option5
-    frontend_columns = ['question', 'option1', 'option2', 'option3', 'option4', 'option5']
-    
-    # Ensure all required columns exist in the DataFrame, filling missing ones with an empty string
-    for col in frontend_columns:
-        if col not in questions_sample_df.columns:
-            questions_sample_df[col] = ''
+            # Select 10 random questions if possible, otherwise select all
+            num_questions_to_select = min(10, len(all_questions))
+            if len(all_questions) < 10:
+                print(f"Warning: Only found {len(all_questions)} questions, less than 10.")
+            
+            random_questions = random.sample(all_questions, num_questions_to_select)
 
-    questions_for_frontend = questions_sample_df[frontend_columns]
-    
-    # Convert NaN to None for proper JSON serialization
-    questions_for_frontend = questions_for_frontend.where(pd.notnull(questions_for_frontend), None)
-    
-    return jsonify(questions_for_frontend.to_dict('records'))
+            # Convert the list of questions to a JSON string
+            response_data = json.dumps(random_questions)
+            self.wfile.write(response_data.encode('utf-8'))
 
-@app.route('/api/submit', methods=['POST'])
-def submit_answers():
-    """API endpoint to check answers and return score."""
-    data = request.json
-    user_answers = data.get('answers', [])
-    questions_from_client = data.get('questions', [])
-    
-    if not questions_from_client:
-        return jsonify({"error": "No questions provided for validation"}), 400
+        except FileNotFoundError as e:
+            self.send_error(500, f"Server Configuration Error: {str(e)}")
+            self.wfile.write(json.dumps({'error': str(e)}).encode('utf-8'))
+        except Exception as e:
+            self.send_error(500, f"An error occurred: {str(e)}")
+            self.wfile.write(json.dumps({'error': str(e)}).encode('utf-8'))
 
-    score = 0
-    summary = []
-    
-    for i, question_data in enumerate(questions_from_client):
-        question_text = question_data.get('question')
-        user_ans = user_answers[i] if i < len(user_answers) and user_answers[i] is not None else "Not Answered"
-        
-        correct_answer = ANSWER_LOOKUP.get(question_text)
-        
-        # Compare answers as strings to ensure consistency
-        is_correct = (str(user_ans) == str(correct_answer))
-        if is_correct:
-            score += 1
-        
-        summary.append({
-            "question": question_text,
-            "user_answer": user_ans,
-            "correct_answer": correct_answer,
-            "correct": is_correct
-        })
-
-    return jsonify({"score": score, "summary": summary})
-
-if __name__ == '__main__':
-    app.run(debug=True, port=5000)
-
+        return
