@@ -1,268 +1,231 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mock Test Platform</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-        }
-        .option-label {
-            transition: all 0.2s ease-in-out;
-        }
-        .option-label:hover {
-            background-color: #eef2ff; /* indigo-50 */
-        }
-        input:checked + .option-label {
-            background-color: #c7d2fe; /* indigo-200 */
-            border-color: #6366f1; /* indigo-500 */
-        }
-    </style>
+  <meta charset="utf-8" />
+  <title>Mock Test (10 Questions)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+    body { margin: 0; background: #f7f7fb; }
+    .wrap { max-width: 900px; margin: 32px auto; padding: 0 16px; }
+    .card { background: #fff; border-radius: 14px; box-shadow: 0 6px 20px rgba(0,0,0,.06); padding: 20px; margin-bottom: 16px; }
+    .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .btn { padding: 10px 16px; border-radius: 10px; border: 1px solid #ddd; background: #fff; cursor: pointer; }
+    .btn.primary { background: #1a73e8; color: #fff; border-color: #1a73e8; }
+    .btn:disabled { opacity: .6; cursor: not-allowed; }
+    .options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+    .opt { padding: 10px; border: 1px solid #ddd; border-radius: 10px; cursor: pointer; background: #fafafa; }
+    .opt.selected { outline: 2px solid #1a73e8; background: #eef4ff; }
+    .timer { font-weight: 700; font-variant-numeric: tabular-nums; }
+    .hidden { display: none; }
+    .qnum { color: #666; font-size: 14px; margin-bottom: 4px; }
+    .question { font-size: 18px; font-weight: 600; }
+    .summary-table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    .summary-table th, .summary-table td { border: 1px solid #e5e7eb; padding: 8px; font-size: 14px; }
+    .ok { color: #0a8a2a; font-weight: 700; }
+    .bad { color: #c22; font-weight: 700; }
+    .footer { text-align: center; color: #666; font-size: 13px; margin-top: 12px; }
+  </style>
 </head>
-<body class="bg-slate-100 text-slate-800 flex items-center justify-center min-h-screen">
-
-    <div id="app-container" class="w-full max-w-3xl mx-auto p-4 md:p-8">
-
-        <!-- Start Screen -->
-        <div id="start-screen" class="bg-white p-8 rounded-xl shadow-lg text-center">
-            <div id="message-box" class="hidden bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-6 text-left" role="alert">
-              <p class="font-bold">Please Note</p>
-              <p id="message-text"></p>
-            </div>
-            <h1 class="text-3xl font-bold text-indigo-600 mb-2">Welcome to the Mock Test!</h1>
-            <p class="text-slate-600 mb-6">You will have 10 minutes to answer 10 questions. Good luck!</p>
-            <button id="start-btn" class="bg-indigo-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-indigo-700 transition-transform transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                Start Test
-            </button>
-             <div id="loading" class="hidden mt-4 text-slate-500">
-                <svg class="animate-spin h-5 w-5 mr-3 inline-block" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Loading questions...
-            </div>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="row">
+        <h2 style="margin:0">Mock Test</h2>
+        <div>Time left: <span class="timer" id="timer">--:--</span></div>
+      </div>
+      <div class="row" style="margin-top:10px;">
+        <div>
+          <label for="qCount">Questions:</label>
+          <input id="qCount" type="number" min="1" max="50" value="10" style="width:60px; padding:6px; border:1px solid #ddd; border-radius:8px;">
+          <label for="minutes" style="margin-left:10px;">Minutes:</label>
+          <input id="minutes" type="number" min="1" max="180" value="10" style="width:60px; padding:6px; border:1px solid #ddd; border-radius:8px;">
         </div>
-
-        <!-- Quiz Screen -->
-        <div id="quiz-screen" class="hidden">
-            <div class="bg-white p-8 rounded-xl shadow-lg">
-                <div class="flex justify-between items-center mb-6">
-                    <div id="progress" class="text-lg font-medium text-slate-700">Question 1/10</div>
-                    <div id="timer" class="text-xl font-bold text-indigo-600 bg-indigo-100 px-4 py-2 rounded-lg">10:00</div>
-                </div>
-
-                <div id="question-container">
-                    <h2 id="question-text" class="text-2xl font-semibold mb-6"></h2>
-                    <div id="options-container" class="space-y-4">
-                        <!-- Options will be dynamically inserted here -->
-                    </div>
-                </div>
-                
-                <div id="quiz-message" class="text-red-500 font-medium text-right h-6 mt-4"></div>
-                <div class="mt-2 text-right">
-                    <button id="next-btn" class="bg-indigo-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-indigo-700 disabled:bg-slate-400 disabled:cursor-not-allowed transition-transform transform hover:scale-105">Next</button>
-                </div>
-            </div>
+        <div>
+          <button id="startBtn" class="btn primary">Start Test</button>
+          <button id="submitBtn" class="btn" disabled>Submit</button>
         </div>
-
-        <!-- Result Screen -->
-        <div id="result-screen" class="hidden">
-             <div class="bg-white p-8 rounded-xl shadow-lg text-center">
-                 <h2 class="text-4xl font-bold text-indigo-600 mb-4">Test Completed!</h2>
-                 <p class="text-2xl text-slate-700 mb-2">Your Score:</p>
-                 <p id="score" class="text-6xl font-extrabold text-slate-800 mb-8">0 / 10</p>
-                 <button id="restart-btn" class="bg-indigo-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-indigo-700 transition-transform transform hover:scale-105">Try Again</button>
-             </div>
-             
-             <div class="mt-8 bg-white p-8 rounded-xl shadow-lg">
-                <h3 class="text-2xl font-bold text-center mb-6">Answer Summary</h3>
-                <div id="summary-container" class="space-y-6">
-                    <!-- Summary will be dynamically inserted here -->
-                </div>
-             </div>
-        </div>
+      </div>
     </div>
 
-    <script>
-        const startScreen = document.getElementById('start-screen');
-        const quizScreen = document.getElementById('quiz-screen');
-        const resultScreen = document.getElementById('result-screen');
-        const startBtn = document.getElementById('start-btn');
-        const nextBtn = document.getElementById('next-btn');
-        const restartBtn = document.getElementById('restart-btn');
-        const loadingDiv = document.getElementById('loading');
-        
-        const progressText = document.getElementById('progress');
-        const timerText = document.getElementById('timer');
-        const questionText = document.getElementById('question-text');
-        const optionsContainer = document.getElementById('options-container');
-        const scoreText = document.getElementById('score');
-        const summaryContainer = document.getElementById('summary-container');
-        
-        const messageBox = document.getElementById('message-box');
-        const messageText = document.getElementById('message-text');
-        const quizMessage = document.getElementById('quiz-message');
+    <div id="questionArea"></div>
 
-        let questions = [];
-        let currentQuestionIndex = 0;
-        let score = 0;
-        let timer;
-        let timeLeft = 600; // 10 minutes in seconds
-        let userAnswers = [];
+    <div id="resultCard" class="card hidden"></div>
 
-        startBtn.addEventListener('click', startTest);
-        nextBtn.addEventListener('click', nextQuestion);
-        restartBtn.addEventListener('click', () => location.reload());
+    <div class="footer">Built for your group – runs on a free Vercel + Python backend.</div>
+  </div>
 
-        function showMessage(message) {
-            messageText.textContent = message;
-            messageBox.classList.remove('hidden');
+  <script>
+    const API_BASE = ""; // same origin; if needed, set to your deployed URL
+    const state = {
+      quizId: null,
+      questions: [],
+      answers: {}, // qid -> "A".."E"
+      timer: null,
+      timeLeft: 0
+    };
+
+    const el = (id) => document.getElementById(id);
+    const questionArea = el("questionArea");
+    const timerSpan = el("timer");
+    const startBtn = el("startBtn");
+    const submitBtn = el("submitBtn");
+    const resultCard = el("resultCard");
+
+    function fmtSecs(s) {
+      const m = Math.floor(s / 60);
+      const ss = s % 60;
+      return `${String(m).padStart(2,"0")}:${String(ss).padStart(2,"0")}`;
+    }
+
+    function startTimer(totalMinutes) {
+      if (state.timer) clearInterval(state.timer);
+      state.timeLeft = Math.max(1, totalMinutes) * 60;
+      timerSpan.textContent = fmtSecs(state.timeLeft);
+      state.timer = setInterval(() => {
+        state.timeLeft--;
+        timerSpan.textContent = fmtSecs(state.timeLeft);
+        if (state.timeLeft <= 0) {
+          clearInterval(state.timer);
+          submitQuiz(); // auto-submit on time up
         }
+      }, 1000);
+    }
 
-        async function startTest() {
-            startBtn.disabled = true;
-            loadingDiv.classList.remove('hidden');
-            
-            try {
-                // In production, Vercel routes this to your python function
-                const response = await fetch('/api/questions');
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                questions = await response.json();
+    function renderQuestions(questions) {
+      questionArea.innerHTML = "";
+      questions.forEach((q, idx) => {
+        const card = document.createElement("div");
+        card.className = "card";
 
-                if (questions.length === 0) {
-                     throw new Error("No questions were loaded from the backend.");
-                }
-                
-                // If fetch is successful, hide any previous mock-data messages
-                messageBox.classList.add('hidden');
-                startQuiz();
+        const qnum = document.createElement("div");
+        qnum.className = "qnum";
+        qnum.textContent = `Question ${idx + 1} of ${questions.length}`;
+        card.appendChild(qnum);
 
-            } catch (error) {
-                console.error("Failed to fetch questions:", error);
-                showMessage("Could not load questions from the server. Using sample questions for this demo. Please follow the README to deploy with your own questions.");
-                
-                // FALLBACK TO MOCK DATA
-                questions = [
-                    { "question": "What is the capital of France?", "option_a": "London", "option_b": "Berlin", "option_c": "Paris", "option_d": "Madrid", "correct_answer": "C" },
-                    { "question": "Which planet is known as the Red Planet?", "option_a": "Earth", "option_b": "Mars", "option_c": "Jupiter", "option_d": "Saturn", "correct_answer": "B" },
-                    { "question": "What is the chemical symbol for water?", "option_a": "O2", "option_b": "H2O", "option_c": "CO2", "option_d": "NaCl", "correct_answer": "B" },
-                    { "question": "Who wrote 'Hamlet'?", "option_a": "Charles Dickens", "option_b": "William Shakespeare", "option_c": "Leo Tolstoy", "option_d": "Mark Twain", "correct_answer": "B" },
-                    { "question": "What is the largest mammal in the world?", "option_a": "Elephant", "option_b": "Blue Whale", "option_c": "Giraffe", "option_d": "Great White Shark", "correct_answer": "B" },
-                    { "question": "Which gas do plants absorb from the atmosphere?", "option_a": "Oxygen", "option_b": "Nitrogen", "option_c": "Carbon Dioxide", "option_d": "Hydrogen", "correct_answer": "C" },
-                    { "question": "What is the boiling point of water at sea level?", "option_a": "90°C", "option_b": "100°C", "option_c": "110°C", "option_d": "120°C", "correct_answer": "B" },
-                    { "question": "Who discovered penicillin?", "option_a": "Marie Curie", "option_b": "Albert Einstein", "option_c": "Isaac Newton", "option_d": "Alexander Fleming", "correct_answer": "D" },
-                    { "question": "What is the currency of Japan?", "option_a": "Yuan", "option_b": "Won", "option_c": "Yen", "option_d": "Rupee", "correct_answer": "C" },
-                    { "question": "In which year did the Titanic sink?", "option_a": "1905", "option_b": "1912", "option_c": "1918", "option_d": "1923", "correct_answer": "B" }
-                ];
+        const qtext = document.createElement("div");
+        qtext.className = "question";
+        qtext.textContent = q.question;
+        card.appendChild(qtext);
 
-                // Allow the quiz to start with mock data after a short delay
-                setTimeout(startQuiz, 500);
-            }
-        }
-        
-        function startQuiz() {
-            startScreen.classList.add('hidden');
-            quizScreen.classList.remove('hidden');
-            
-            currentQuestionIndex = 0;
-            score = 0;
-            userAnswers = [];
-            timeLeft = 600;
+        const optsWrap = document.createElement("div");
+        optsWrap.className = "options";
 
-            displayQuestion();
-            startTimer();
-        }
+        Object.entries(q.options).forEach(([letter, text]) => {
+          const opt = document.createElement("div");
+          opt.className = "opt";
+          opt.dataset.qid = q.id;
+          opt.dataset.choice = letter;
+          opt.textContent = `${letter}. ${text}`;
+          opt.onclick = () => {
+            state.answers[q.id] = letter;
+            // toggle selected styling within this card
+            [...optsWrap.children].forEach(c => c.classList.remove("selected"));
+            opt.classList.add("selected");
+          };
+          optsWrap.appendChild(opt);
+        });
 
-        function startTimer() {
-            timer = setInterval(() => {
-                timeLeft--;
-                const minutes = Math.floor(timeLeft / 60);
-                const seconds = timeLeft % 60;
-                timerText.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+        card.appendChild(optsWrap);
+        questionArea.appendChild(card);
+      });
+    }
 
-                if (timeLeft <= 0) {
-                    clearInterval(timer);
-                    showResults();
-                }
-            }, 1000);
-        }
+    async function startQuiz() {
+      resultCard.classList.add("hidden");
+      submitBtn.disabled = true;
+      startBtn.disabled = true;
 
-        function displayQuestion() {
-            const question = questions[currentQuestionIndex];
-            progressText.textContent = `Question ${currentQuestionIndex + 1}/${questions.length}`;
-            questionText.textContent = question.question;
-            optionsContainer.innerHTML = '';
+      const n = parseInt(el("qCount").value || "10", 10);
+      const minutes = parseInt(el("minutes").value || "10", 10);
 
-            const options = ['A', 'B', 'C', 'D'];
-            options.forEach(optionKey => {
-                const optionValue = question[`option_${optionKey.toLowerCase()}`];
-                const optionElement = document.createElement('div');
-                optionElement.innerHTML = `
-                    <input type="radio" name="option" value="${optionKey}" id="option${optionKey}" class="hidden">
-                    <label for="option${optionKey}" class="option-label block w-full p-4 border-2 border-slate-300 rounded-lg cursor-pointer text-lg">
-                        <span class="font-bold mr-3">${optionKey}.</span> ${optionValue}
-                    </label>
-                `;
-                optionsContainer.appendChild(optionElement);
-            });
-        }
-        
-        function nextQuestion() {
-            const selectedOption = document.querySelector('input[name="option"]:checked');
-            
-            if (!selectedOption) {
-                quizMessage.textContent = "Please select an answer.";
-                setTimeout(() => quizMessage.textContent = '', 2000);
-                return;
-            }
+      try {
+        const res = await fetch(`${API_BASE}/api/start?n=${n}`);
+        if (!res.ok) throw new Error("Failed to start quiz");
+        const data = await res.json();
+        state.quizId = data.quiz_id;
+        state.questions = data.questions;
+        state.answers = {};
+        renderQuestions(state.questions);
+        submitBtn.disabled = false;
+        startTimer(minutes);
+      } catch (e) {
+        alert("Error starting quiz. Please try again.");
+        console.error(e);
+        startBtn.disabled = false;
+      }
+    }
 
-            const answer = selectedOption.value;
-            userAnswers[currentQuestionIndex] = answer;
-            
-            if (answer === questions[currentQuestionIndex].correct_answer) {
-                score++;
-            }
+    async function submitQuiz() {
+      submitBtn.disabled = true;
+      startBtn.disabled = false;
+      if (state.timer) clearInterval(state.timer);
 
-            currentQuestionIndex++;
-            if (currentQuestionIndex < questions.length) {
-                displayQuestion();
-            } else {
-                showResults();
-            }
-        }
+      const payload = {
+        quiz_id: state.quizId || "stateless",
+        answers: state.answers
+      };
 
-        function showResults() {
-            clearInterval(timer);
-            quizScreen.classList.add('hidden');
-            resultScreen.classList.remove('hidden');
+      try {
+        const res = await fetch(`${API_BASE}/api/submit`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        showResults(data);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } catch (e) {
+        alert("Error submitting quiz. Please try again.");
+        console.error(e);
+      }
+    }
 
-            scoreText.textContent = `${score} / ${questions.length}`;
-            summaryContainer.innerHTML = '';
-            
-            questions.forEach((question, index) => {
-                const userAnswer = userAnswers[index] || "Not Answered";
-                const isCorrect = userAnswer === question.correct_answer;
-                const correctOptionText = question[`option_${question.correct_answer.toLowerCase()}`];
-                
-                const summaryCard = document.createElement('div');
-                summaryCard.className = `p-4 rounded-lg border-2 ${isCorrect ? 'border-green-400 bg-green-50' : 'border-red-400 bg-red-50'}`;
-                
-                summaryCard.innerHTML = `
-                    <p class="font-bold text-lg mb-2">${index + 1}. ${question.question}</p>
-                    <p class="text-slate-600">Your answer: <span class="font-semibold">${userAnswer}${userAnswer !== "Not Answered" ? `. ${question[`option_${userAnswer.toLowerCase()}`]}` : ''}</span></p>
-                    <p class="${isCorrect ? 'text-green-700' : 'text-red-700'} font-semibold">
-                        ${isCorrect ? 'Correct!' : `Correct answer: ${question.correct_answer}. ${correctOptionText}`}
-                    </p>
-                `;
-                summaryContainer.appendChild(summaryCard);
-            });
-        }
-    </script>
+    function showResults(data) {
+      const { score, total, correct, wrong, details } = data;
+      const pct = total ? Math.round((score / total) * 100) : 0;
+
+      let html = `
+        <h3 style="margin-top:0">Your Result</h3>
+        <div class="row" style="margin-bottom:10px;">
+          <div><strong>Score:</strong> ${score}/${total} (${pct}%)</div>
+          <div><strong>Correct:</strong> <span class="ok">${correct}</span> &nbsp; <strong>Wrong:</strong> <span class="bad">${wrong}</span></div>
+        </div>
+        <details open>
+          <summary><strong>Answer Summary</strong></summary>
+          <table class="summary-table">
+            <thead>
+              <tr><th>#</th><th>Question</th><th>Your Answer</th><th>Correct</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+      `;
+
+      details.forEach((d, i) => {
+        const ytxt = `${d.your_answer}. ${d.options[d.your_answer] ?? ""}`;
+        const ctxt = `${d.correct_answer}. ${d.options[d.correct_answer] ?? ""}`;
+        html += `
+          <tr>
+            <td>${i + 1}</td>
+            <td>${d.question}</td>
+            <td>${ytxt}</td>
+            <td>${ctxt}</td>
+            <td>${d.is_correct ? '<span class="ok">Correct</span>' : '<span class="bad">Wrong</span>'}</td>
+          </tr>
+        `;
+      });
+
+      html += `
+            </tbody>
+          </table>
+        </details>
+      `;
+
+      resultCard.innerHTML = html;
+      resultCard.classList.remove("hidden");
+    }
+
+    startBtn.addEventListener("click", startQuiz);
+    submitBtn.addEventListener("click", submitQuiz);
+  </script>
 </body>
 </html>
-
