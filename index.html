@@ -10,310 +10,223 @@
         body {
             font-family: 'Inter', sans-serif;
         }
-        .option-label {
-            transition: all 0.2s ease-in-out;
+        .quiz-option.selected {
+            background-color: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
         }
-        .option-label:hover {
-            background-color: #eef2ff; /* indigo-50 */
+        .quiz-option.correct {
+            background-color: #22c55e;
+            color: white;
+            border-color: #22c55e;
         }
-        input[type="radio"]:checked + .option-label {
-            background-color: #c7d2fe; /* indigo-200 */
-            border-color: #6366f1; /* indigo-500 */
+        .quiz-option.incorrect {
+            background-color: #ef4444;
+            color: white;
+            border-color: #ef4444;
         }
     </style>
 </head>
-<body class="bg-slate-100 flex items-center justify-center min-h-screen">
+<body class="bg-gray-100 text-gray-800">
 
-    <div id="main-container" class="bg-white p-6 sm:p-8 rounded-2xl shadow-lg w-full max-w-3xl transition-all duration-500">
-        
+    <div id="app" class="container mx-auto p-4 md:p-8 max-w-4xl">
+        <!-- Header -->
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-900">Mock Test Platform</h1>
+            <p class="text-lg text-gray-600 mt-2">Test your knowledge with our quiz!</p>
+        </header>
+
         <!-- Start Screen -->
-        <div id="start-screen" class="text-center">
-            <h1 class="text-3xl sm:text-4xl font-bold text-slate-800 mb-4">PNB VIGILANCE TEAM, CHENNAI </h1>
-            <p class="text-slate-600 mb-8 max-w-md mx-auto">You will be presented with 10 random questions. You'll have 10 minutes to complete the test. Click the button below to begin.</p>
-            <button id="start-btn" class="bg-indigo-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-300 transition-transform transform hover:scale-105">
+        <div id="start-screen" class="bg-white p-8 rounded-2xl shadow-lg text-center">
+            <h2 class="text-2xl font-semibold mb-4">Welcome to the Mock Test!</h2>
+            <p class="mb-6 text-gray-700">You will have 5 minutes to answer 10 questions. Click the button below to start.</p>
+            <button id="start-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-8 rounded-lg transition duration-300 text-lg">
                 Start Test
             </button>
         </div>
 
-        <!-- Test Screen -->
-        <div id="test-screen" class="hidden">
+        <!-- Quiz Screen -->
+        <div id="quiz-screen" class="hidden bg-white p-8 rounded-2xl shadow-lg">
             <div class="flex justify-between items-center mb-6">
-                <h2 class="text-2xl font-bold text-slate-800">Question <span id="question-number"></span>/10</h2>
-                <div id="timer" class="text-xl font-bold bg-indigo-100 text-indigo-700 px-4 py-2 rounded-lg">10:00</div>
+                <div id="question-counter" class="text-lg font-semibold">Question 1/10</div>
+                <div id="timer" class="text-lg font-bold bg-gray-200 px-4 py-2 rounded-lg">05:00</div>
             </div>
-            <div id="question-container">
-                <p id="question-text" class="text-lg text-slate-700 mb-6 min-h-[60px]"></p>
-                <div id="options-container" class="space-y-3">
+            <div id="quiz-content">
+                <h2 id="question-text" class="text-2xl font-semibold mb-6"></h2>
+                <div id="options-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <!-- Options will be dynamically inserted here -->
                 </div>
             </div>
-            <div class="flex justify-between mt-8">
-                <button id="prev-btn" class="bg-slate-300 text-slate-800 font-bold py-2 px-6 rounded-lg hover:bg-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">Previous</button>
-                <button id="next-btn" class="bg-indigo-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-300">Next</button>
-                <button id="submit-btn" class="hidden bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-4 focus:ring-green-300">Submit Test</button>
-            </div>
-        </div>
-
-        <!-- Results Screen -->
-        <div id="results-screen" class="hidden">
-            <h2 class="text-3xl sm:text-4xl font-bold text-slate-800 text-center mb-2">Test Complete!</h2>
-            <p class="text-center text-slate-600 mb-6">Here's how you did:</p>
-            <div class="bg-indigo-50 border-2 border-indigo-200 rounded-xl p-6 text-center mb-8">
-                <p class="text-lg text-slate-700">Your Score</p>
-                <p class="text-6xl font-extrabold text-indigo-600"><span id="score"></span><span class="text-3xl font-medium text-slate-500">/10</span></p>
-            </div>
-
-            <h3 class="text-2xl font-bold text-slate-800 mb-4">Answer Summary</h3>
-            <div id="summary-container" class="space-y-4 max-h-[40vh] overflow-y-auto pr-2">
-                <!-- Summary will be dynamically inserted here -->
-            </div>
-            <div class="text-center mt-8">
-                 <button id="restart-btn" class="bg-indigo-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-300 transition-transform transform hover:scale-105">
-                    Take Another Test
+            <div class="mt-8 text-right">
+                <button id="next-btn" class="bg-gray-800 hover:bg-gray-900 text-white font-bold py-2 px-6 rounded-lg transition duration-300">
+                    Next
                 </button>
             </div>
         </div>
-        
-        <!-- Loading Spinner -->
-        <div id="loading-spinner" class="hidden text-center">
-            <svg class="animate-spin h-10 w-10 text-indigo-600 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            <p class="mt-4 text-slate-600">Loading...</p>
-        </div>
 
-    </div>
-
-    <!-- Confirmation Modal -->
-    <div id="confirmation-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white p-8 rounded-2xl shadow-xl text-center w-full max-w-sm">
-            <h3 class="text-xl font-bold text-slate-800 mb-4">Are you sure?</h3>
-            <p class="text-slate-600 mb-8">Do you want to submit your test?</p>
-            <div class="flex justify-center gap-4">
-                <button id="cancel-submit-btn" class="bg-slate-300 text-slate-800 font-bold py-2 px-6 rounded-lg hover:bg-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">Cancel</button>
-                <button id="confirm-submit-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-4 focus:ring-green-300">Submit</button>
+        <!-- Result Screen -->
+        <div id="result-screen" class="hidden bg-white p-8 rounded-2xl shadow-lg text-center">
+            <h2 class="text-3xl font-bold mb-4">Test Completed!</h2>
+            <p class="text-xl mb-2">Your Score:</p>
+            <div id="score" class="text-5xl font-extrabold text-blue-500 mb-6"></div>
+            <div id="summary" class="text-left space-y-4">
+                <!-- Summary of correct/incorrect answers will be here -->
             </div>
+            <button id="restart-btn" class="mt-8 bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-8 rounded-lg transition duration-300 text-lg">
+                Try Again
+            </button>
         </div>
     </div>
-
 
     <script>
         const startScreen = document.getElementById('start-screen');
-        const testScreen = document.getElementById('test-screen');
-        const resultsScreen = document.getElementById('results-screen');
-        const mainContainer = document.getElementById('main-container');
-        const loadingSpinner = document.getElementById('loading-spinner');
-
+        const quizScreen = document.getElementById('quiz-screen');
+        const resultScreen = document.getElementById('result-screen');
         const startBtn = document.getElementById('start-btn');
         const nextBtn = document.getElementById('next-btn');
-        const prevBtn = document.getElementById('prev-btn');
-        const submitBtn = document.getElementById('submit-btn');
         const restartBtn = document.getElementById('restart-btn');
-
-        const questionNumberEl = document.getElementById('question-number');
-        const questionTextEl = document.getElementById('question-text');
-        const optionsContainer = document.getElementById('options-container');
+        const questionCounter = document.getElementById('question-counter');
         const timerEl = document.getElementById('timer');
-        
+        const questionText = document.getElementById('question-text');
+        const optionsContainer = document.getElementById('options-container');
         const scoreEl = document.getElementById('score');
-        const summaryContainer = document.getElementById('summary-container');
-
-        const confirmationModal = document.getElementById('confirmation-modal');
-        const cancelSubmitBtn = document.getElementById('cancel-submit-btn');
-        const confirmSubmitBtn = document.getElementById('confirm-submit-btn');
-
-        // IMPORTANT: For local development, use your Python backend URL (e.g., http://127.0.0.1:5000).
-        // This is a common source of "network response not ok" errors if the backend isn't running
-        // or is on a different address.
-        // When deploying to a service like PythonAnywhere, this can be changed
-        // back to window.location.origin if frontend and backend are on the same domain.
-        const API_BASE_URL = 'http://127.0.0.1:5000';
+        const summaryEl = document.getElementById('summary');
 
         let questions = [];
         let currentQuestionIndex = 0;
+        let score = 0;
         let userAnswers = [];
-        let timerInterval;
+        let timer;
+        let timeLeft = 300; // 5 minutes in seconds
 
-        startBtn.addEventListener('click', startTest);
-        nextBtn.addEventListener('click', nextQuestion);
-        prevBtn.addEventListener('click', prevQuestion);
-        submitBtn.addEventListener('click', confirmAndSubmit);
-        restartBtn.addEventListener('click', () => location.reload());
-        cancelSubmitBtn.addEventListener('click', () => confirmationModal.classList.add('hidden'));
-        confirmSubmitBtn.addEventListener('click', () => {
-            confirmationModal.classList.add('hidden');
-            submitTest();
-        });
-
-
-        function showScreen(screen) {
-            startScreen.classList.add('hidden');
-            testScreen.classList.add('hidden');
-            resultsScreen.classList.add('hidden');
-            loadingSpinner.classList.add('hidden');
-            screen.classList.remove('hidden');
-        }
-
-        async function startTest() {
-            showScreen(loadingSpinner);
+        async function fetchQuestions() {
             try {
-                const response = await fetch(`${API_BASE_URL}/get_questions`);
+                // Point to the full URL of your local Flask server
+                const response = await fetch('http://127.0.0.1:5000/api/questions');
                 if (!response.ok) {
                     throw new Error('Network response was not ok');
                 }
                 questions = await response.json();
-                userAnswers = new Array(questions.length).fill(null);
-                currentQuestionIndex = 0;
-                showScreen(testScreen);
-                displayQuestion();
-                startTimer();
             } catch (error) {
                 console.error('Failed to fetch questions:', error);
-                startScreen.innerHTML = `<p class="text-red-500 font-semibold">Error: Could not load questions.</p> <p class="text-slate-600 mt-2">Please ensure the Python backend server is running and the API_BASE_URL is correct.</p>`;
-                showScreen(startScreen);
-            }
-        }
-
-        function displayQuestion() {
-            const question = questions[currentQuestionIndex];
-            questionNumberEl.textContent = currentQuestionIndex + 1;
-            questionTextEl.textContent = question.Question;
-            optionsContainer.innerHTML = '';
-
-            const options = ['A', 'B', 'C', 'D', 'E'];
-            options.forEach(optionKey => {
-                const optionValue = question[`Option${optionKey}`];
-                if (optionValue) {
-                    const optionElement = document.createElement('div');
-                    const radioId = `q${currentQuestionIndex}_option${optionKey}`;
-                    
-                    optionElement.innerHTML = `
-                        <input type="radio" id="${radioId}" name="question${currentQuestionIndex}" value="${optionKey}" class="hidden">
-                        <label for="${radioId}" class="option-label flex items-center p-4 border-2 rounded-lg cursor-pointer">
-                            <span class="font-bold mr-4">${optionKey}</span>
-                            <span>${optionValue}</span>
-                        </label>
-                    `;
-                    optionsContainer.appendChild(optionElement);
-                    
-                    const radio = optionElement.querySelector('input[type="radio"]');
-                    if (userAnswers[currentQuestionIndex] === optionKey) {
-                        radio.checked = true;
-                    }
-                    radio.addEventListener('change', () => {
-                        userAnswers[currentQuestionIndex] = radio.value;
-                    });
-                }
-            });
-
-            updateNavigationButtons();
-        }
-
-        function updateNavigationButtons() {
-            prevBtn.classList.toggle('hidden', currentQuestionIndex === 0);
-            nextBtn.classList.toggle('hidden', currentQuestionIndex === questions.length - 1);
-            submitBtn.classList.toggle('hidden', currentQuestionIndex !== questions.length - 1);
-        }
-
-        function saveAnswer() {
-             const selectedOption = document.querySelector(`input[name="question${currentQuestionIndex}"]:checked`);
-            if (selectedOption) {
-                userAnswers[currentQuestionIndex] = selectedOption.value;
-            }
-        }
-
-        function nextQuestion() {
-            saveAnswer();
-            if (currentQuestionIndex < questions.length - 1) {
-                currentQuestionIndex++;
-                displayQuestion();
+                questionText.innerHTML = '<p class="text-red-500">Failed to load questions. Please ensure the Python server (`app.py`) is running and you are accessing this page through the server\'s URL (e.g., http://127.0.0.1:5000), not by opening the HTML file directly.</p>';
             }
         }
         
-        function prevQuestion() {
-            saveAnswer();
-            if (currentQuestionIndex > 0) {
-                currentQuestionIndex--;
-                displayQuestion();
-            }
-        }
-
-        function confirmAndSubmit() {
-            saveAnswer();
-            confirmationModal.classList.remove('hidden');
-        }
-
-        async function submitTest() {
-            clearInterval(timerInterval);
-            showScreen(loadingSpinner);
-            
-            const submissionData = questions.map((q, index) => ({
-                Question: q.Question,
-                selected_answer: userAnswers[index]
-            }));
-
-            try {
-                const response = await fetch(`${API_BASE_URL}/submit_test`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(submissionData),
-                });
-                if (!response.ok) {
-                    throw new Error('Submission failed');
-                }
-                const results = await response.json();
-                displayResults(results);
-            } catch (error) {
-                console.error('Failed to submit test:', error);
-                resultsScreen.innerHTML = `<p class="text-red-500">Error: Could not submit test. Please try again later.</p>`;
-                showScreen(resultsScreen);
-            }
-        }
-        
-        function displayResults(results) {
-            showScreen(resultsScreen);
-            scoreEl.textContent = results.score;
-            summaryContainer.innerHTML = '';
-
-            results.summary.forEach((item, index) => {
-                const isCorrect = item.status === 'Correct';
-                const summaryCard = document.createElement('div');
-                summaryCard.className = `p-4 rounded-lg border-2 ${isCorrect ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`;
-                
-                let userAnswerText = 'Not Answered';
-                if (item.selected_answer && questions[index]['Option' + item.selected_answer]) {
-                    userAnswerText = `${item.selected_answer}. ${questions[index]['Option' + item.selected_answer]}`;
-                }
-
-                summaryCard.innerHTML = `
-                    <p class="font-bold text-slate-800 mb-2">${index + 1}. ${item.question}</p>
-                    <p class="text-sm ${isCorrect ? 'text-green-700' : 'text-red-700'}">Your Answer: ${userAnswerText}</p>
-                    <p class="text-sm text-slate-600">Correct Answer: ${item.correct_answer_key}. ${item.correct_answer_value}</p>
-                `;
-                summaryContainer.appendChild(summaryCard);
-            });
-        }
-
         function startTimer() {
-            let time = 10 * 60; // 10 minutes in seconds
-            timerInterval = setInterval(() => {
-                const minutes = Math.floor(time / 60);
-                let seconds = time % 60;
-                seconds = seconds < 10 ? '0' + seconds : seconds;
-
+            timer = setInterval(() => {
+                timeLeft--;
+                const minutes = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+                const seconds = (timeLeft % 60).toString().padStart(2, '0');
                 timerEl.textContent = `${minutes}:${seconds}`;
-                
-                if (--time < 0) {
-                    clearInterval(timerInterval);
-                    timerEl.textContent = "Time's Up!";
-                    timerEl.classList.add('bg-red-200', 'text-red-800');
-                    submitTest();
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    endQuiz();
                 }
             }, 1000);
         }
+
+        function startQuiz() {
+            startScreen.classList.add('hidden');
+            quizScreen.classList.remove('hidden');
+            currentQuestionIndex = 0;
+            score = 0;
+            userAnswers = [];
+            timeLeft = 300;
+            fetchQuestions().then(() => {
+                if(questions.length > 0) {
+                    displayQuestion();
+                    startTimer();
+                }
+            });
+        }
+
+        function displayQuestion() {
+            if (currentQuestionIndex >= questions.length) {
+                endQuiz();
+                return;
+            }
+            const question = questions[currentQuestionIndex];
+            questionCounter.textContent = `Question ${currentQuestionIndex + 1}/${questions.length}`;
+            questionText.textContent = question.question;
+            optionsContainer.innerHTML = '';
+            
+            // Now includes option5
+            const options = [question.option1, question.option2, question.option3, question.option4, question.option5];
+            options.forEach(option => {
+                // Only create a button if the option exists and is not empty
+                if (option && option.toString().trim() !== '') {
+                    const button = document.createElement('button');
+                    button.textContent = option;
+                    button.classList.add('quiz-option', 'p-4', 'border-2', 'rounded-lg', 'text-left', 'transition', 'duration-200', 'hover:bg-blue-100');
+                    button.onclick = () => selectOption(button, option);
+                    optionsContainer.appendChild(button);
+                }
+            });
+            nextBtn.disabled = true;
+        }
+
+        function selectOption(button, selectedOption) {
+            document.querySelectorAll('.quiz-option').forEach(btn => {
+                btn.classList.remove('selected');
+                btn.disabled = true;
+            });
+            button.classList.add('selected');
+            userAnswers[currentQuestionIndex] = selectedOption;
+            nextBtn.disabled = false;
+        }
+
+        function showNextQuestion() {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < questions.length) {
+                displayQuestion();
+            } else {
+                endQuiz();
+            }
+        }
+
+        async function endQuiz() {
+            clearInterval(timer);
+            quizScreen.classList.add('hidden');
+            resultScreen.classList.remove('hidden');
+
+            try {
+                // Point to the full URL of your local Flask server
+                const response = await fetch('http://127.0.0.1:5000/api/submit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ answers: userAnswers, questions: questions })
+                });
+                const result = await response.json();
+                score = result.score;
+                const summary = result.summary;
+
+                scoreEl.textContent = `${score}/${questions.length}`;
+                summaryEl.innerHTML = `<h3 class="text-xl font-semibold mb-4 border-b pb-2">Review Your Answers</h3>`;
+                summary.forEach((item, index) => {
+                    const questionDiv = document.createElement('div');
+                    questionDiv.classList.add('p-4', 'rounded-lg', item.correct ? 'bg-green-100' : 'bg-red-100');
+                    questionDiv.innerHTML = `
+                        <p class="font-semibold">${index + 1}. ${item.question}</p>
+                        <p>Your answer: <span class="font-bold ${item.correct ? 'text-green-800' : 'text-red-800'}">${item.user_answer || "Not Answered"}</span></p>
+                        ${!item.correct ? `<p>Correct answer: <span class="font-bold text-green-800">${item.correct_answer}</span></p>` : ''}
+                    `;
+                    summaryEl.appendChild(questionDiv);
+                });
+
+            } catch (error) {
+                console.error('Error submitting answers:', error);
+                summaryEl.textContent = 'Could not retrieve results. Please try again.';
+            }
+        }
+
+        startBtn.addEventListener('click', startQuiz);
+        nextBtn.addEventListener('click', showNextQuestion);
+        restartBtn.addEventListener('click', () => {
+            resultScreen.classList.add('hidden');
+            startScreen.classList.remove('hidden');
+        });
+
     </script>
 </body>
 </html>
