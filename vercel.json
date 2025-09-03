@@ -1,15 +1,12 @@
 {
-    "version": 2,
-    "builds": [
-        {
-            "src": "api/questions.py",
-            "use": "@vercel/python"
-        }
-    ],
-    "routes": [
-        {
-            "src": "/api/questions",
-            "dest": "api/questions.py"
-        }
-    ]
+  "builds": [
+    {
+      "src": "api/index.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    { "src": "/api/(.*)", "dest": "api/index.py" },
+    { "src": "/(.*)", "dest": "/index.html" }
+  ]
 }
