@@ -4,3 +4,4 @@ jinja2
 pandas
 openpyxl
 python-multipart
+Flask==2.0.1
