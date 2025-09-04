@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="flex items-center justify-between mb-4">
+  <h1 class="text-2xl font-semibold">Mock Test</h1>
+  <div>
+    <span class="chip">Type: {{ qtype }}</span>
+    <span class="chip">Timer: <span id="timer">00:00</span></span>
+  </div>
+</div>
+
+<form method="post" action="/submit" id="quizForm">
+  <input type="hidden" name="duration" id="duration" value="00:00" />
+  <div class="space-y-6">
+    {% for qid, row in questions %}
+    <div class="card">
+      <div class="text-sm text-gray-500 mb-1">Q{{ loop.index }} of {{ questions|length }}</div>
+      <p class="font-medium mb-4">{{ row['question'] }}</p>
+
+      <div class="space-y-2">
+        {% for letter in ["A","B","C","D","E"] %}
+          {% set opt = row[letter] %}
+          {% if opt and opt|length > 0 and opt|lower != 'nan' %}
+          <label class="flex gap-3 items-start p-2 rounded-lg hover:bg-gray-50 cursor-pointer">
+            <input type="radio" name="{{ qid }}" value="{{ letter }}" class="mt-1">
+            <span><span class="font-semibold">{{ letter }}.</span> {{ opt }}</span>
+          </label>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="mt-6 flex items-center gap-3">
+    <button class="btn btn-primary" type="submit">Submit</button>
+    <button class="btn btn-neutral" type="button" onclick="confirmSubmit()">Finish & Submit</button>
+    <span class="text-xs text-gray-500">Your time will be recorded.</span>
+  </div>
+</form>
+
+<script>
+  // Simple timer
+  let seconds = 0;
+  const timerEl = document.getElementById("timer");
+  const durationEl = document.getElementById("duration");
+  const tick = () => {
+    seconds += 1;
+    const m = String(Math.floor(seconds / 60)).padStart(2, "0");
+    const s = String(seconds % 60).padStart(2, "0");
+    const t = `${m}:${s}`;
+    timerEl.textContent = t;
+    durationEl.value = t;
+  };
+  let intervalId = setInterval(tick, 1000);
+
+  function confirmSubmit() {
+    if (confirm("Are you sure you want to submit the test?")) {
+      document.getElementById("quizForm").submit();
+    }
+  }
+</script>
+{% endblock %}
