@@ -1,11 +1,10 @@
 {
   "functions": {
     "api/index.py": {
-      "runtime": "python3.11"
+      "runtime": "vercel-python@0.5.0"
     }
   },
   "routes": [
-    { "src": "/favicon.ico", "dest": "/api/index.py" },
     { "src": "/(.*)", "dest": "/api/index.py" }
   ]
 }
