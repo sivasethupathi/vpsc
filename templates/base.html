@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>{{ title if title else "Mock Test | Bank Promotion" }}</title>
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .card { @apply bg-white rounded-2xl shadow p-6; }
+    .btn  { @apply inline-flex items-center justify-center rounded-xl px-4 py-2 font-medium shadow; }
+    .btn-primary { @apply bg-indigo-600 text-white hover:bg-indigo-700; }
+    .btn-neutral { @apply bg-gray-100 hover:bg-gray-200; }
+    .chip { @apply inline-block text-xs px-2 py-1 rounded-full bg-indigo-50 text-indigo-700; }
+  </style>
+</head>
+<body class="bg-slate-50 min-h-screen">
+  <header class="border-b bg-white">
+    <div class="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
+      <div class="text-xl font-semibold">🏦 Bank Promotion Mock Test</div>
+      <nav class="space-x-2">
+        <a href="/" class="text-sm text-gray-600 hover:text-gray-900">Home</a>
+        <a href="/health" class="text-sm text-gray-600 hover:text-gray-900">Health</a>
+      </nav>
+    </div>
+  </header>
+  <main class="max-w-4xl mx-auto px-4 py-8">
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="mt-16 pb-10 text-center text-xs text-gray-500">
+    Built with FastAPI · Deployed on Vercel
+  </footer>
+</body>
+</html>
