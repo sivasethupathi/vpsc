@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h1 class="text-2xl font-bold mb-2">Start a New Test</h1>
+  <p class="text-gray-600 mb-6">Select a question type from your Excel (Column A). The test will pull 10 random questions from the selected type.</p>
+
+  <form method="post" action="/start" class="space-y-4">
+    <label class="block">
+      <span class="text-sm font-medium text-gray-700">Question Type</span>
+      <select name="qtype" required class="mt-1 w-full rounded-xl border-gray-300">
+        <option value="" disabled selected>Select a type</option>
+        {% for t in types %}
+        <option value="{{ t }}">{{ t }}</option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <div class="flex items-center gap-3">
+      <button class="btn btn-primary" type="submit">Start Test</button>
+      <span class="text-xs text-gray-500">10 random questions · Timer will start automatically</span>
+    </div>
+  </form>
+</div>
+{% endblock %}
