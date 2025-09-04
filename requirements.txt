@@ -5,3 +5,4 @@ pandas
 openpyxl
 python-multipart
 Flask==2.0.1
+uvicorn api.index:app --host 0.0.0.0 --port 8000
