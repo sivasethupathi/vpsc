@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card mb-4">
+  <div class="flex items-center justify-between">
+    <h1 class="text-2xl font-semibold">Results</h1>
+    <div class="space-x-2">
+      <span class="chip">Type: {{ qtype }}</span>
+      <span class="chip">Time: {{ duration }}</span>
+    </div>
+  </div>
+  <div class="mt-3 text-lg">
+    Score: <span class="font-bold">{{ score }}</span> / {{ total }}
+    <span class="text-sm text-gray-500 ml-2">({{ ((score/total)*100)|round(2) }}%)</span>
+  </div>
+
+  <div class="mt-6 flex items-center gap-3">
+    <form method="post" action="/retake">
+      <button class="btn btn-primary" type="submit">Retake Same Test</button>
+    </form>
+    <a class="btn btn-neutral" href="/">Start Another Test</a>
+  </div>
+</div>
+
+<div class="space-y-6">
+  {% for row in review %}
+  <div class="card">
+    <div class="mb-2 text-sm text-gray-500">Question {{ loop.index }}</div>
+    <p class="font-medium mb-4">{{ row.question }}</p>
+
+    <ul class="space-y-1 mb-4">
+      {% for letter, text in row.options.items() %}
+        {% if text and text|length > 0 and text|lower != 'nan' %}
+        <li class="flex items-start gap-2">
+          <span class="font-semibold w-6">{{ letter }}.</span>
+          <span>{{ text }}</span>
+        </li>
+        {% endif %}
+      {% endfor %}
+    </ul>
+
+    <div class="mt-2">
+      <div class="text-sm">
+        Your answer:
+        {% if row.user_letter != "-" %}
+          <span class="font-semibold">{{ row.user_letter }}</span> — {{ row.user_text }}
+        {% else %}
+          <span class="text-gray-500">No answer</span>
+        {% endif %}
+      </div>
+      <div class="text-sm">
+        Correct answer:
+        <span class="font-semibold">{{ row.correct_letter }}</span> — {{ row.correct_text }}
+      </div>
+    </div>
+
+    {% if row.is_correct %}
+      <div class="mt-3 text-green-700 text-sm font-medium">✔ Correct</div>
+    {% else %}
+      <div class="mt-3 text-red-700 text-sm font-medium">✘ Incorrect</div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}
