@@ -1,127 +1,213 @@
-# api/index.py
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-import pandas as pd
-import random
 import os
+import random
+from pathlib import Path
+from typing import List, Dict, Any
 
-# ---- Load questions once per cold start ----
-# Expect columns: Question, OptionA, OptionB, OptionC, OptionD, OptionE, Answer
-# - "Answer" should be the correct option letter like A/B/C/D/E (case-insensitive),
-#   or the exact text matching one of the options.
-EXCEL_PATH = os.path.join(os.path.dirname(__file__), "..", "questions.xlsx")
-df = pd.read_excel(EXCEL_PATH)
+from fastapi import FastAPI, Request, Form
+from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 
-# Normalize columns (trim and unify)
-df.columns = [c.strip() for c in df.columns]
-required_cols = ["Question", "OptionA", "OptionB", "OptionC", "OptionD", "OptionE", "Answer"]
-missing = [c for c in required_cols if c not in df.columns]
-if missing:
-    raise RuntimeError(f"Your Excel is missing required columns: {missing}")
+from starlette.middleware.sessions import SessionMiddleware
+import pandas as pd
 
-# Build a clean list of question dicts we can sample from quickly
-QUESTION_BANK = []
-for i, row in df.iterrows():
-    qid = str(i)  # stable ID from row index
-    opts = {
-        "A": str(row["OptionA"]),
-        "B": str(row["OptionB"]),
-        "C": str(row["OptionC"]),
-        "D": str(row["OptionD"]),
-        "E": str(row["OptionE"]),
-    }
-    # Accept either a letter or exact option text in "Answer"
-    raw_ans = str(row["Answer"]).strip()
-    ans_letter = None
-    if raw_ans.upper() in opts.keys():
-        ans_letter = raw_ans.upper()
-    else:
-        # find which letter matches the text
-        for k, v in opts.items():
-            if raw_ans.strip().lower() == v.strip().lower():
-                ans_letter = k
-                break
-    if ans_letter is None:
-        # Fallback: default to A to avoid crashing; better to clean Excel
-        ans_letter = "A"
-    QUESTION_BANK.append({
-        "id": qid,
-        "question": str(row["Question"]),
-        "options": opts,
-        "answer": ans_letter,  # keep server-side truth
+# -----------------------------
+# Configuration
+# -----------------------------
+BASE_DIR = Path(__file__).resolve().parent.parent
+DATA_FILE = BASE_DIR / "data" / "question_bank.xlsx"  # <-- place your Excel here
+SESSION_SECRET = os.getenv("SESSION_SECRET", "change-me-please")
+
+# -----------------------------
+# App & templates
+# -----------------------------
+app = FastAPI()
+app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET)
+
+templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
+
+# Optionally mount a static directory if you add custom assets:
+# (Not required since we use Tailwind CDN in templates)
+# app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
+
+# -----------------------------
+# Data loading utilities
+# -----------------------------
+def _normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """Make sure the DataFrame has consistent column names regardless of the original Excel headers."""
+    # If the file is strictly positional: A..J
+    # A: type, B: question, C..G: options A..E, J: answer (note: H/I ignored)
+    # Try by header names first; fallback to positions.
+    cols = {c: str(c).strip().lower() for c in df.columns}
+    lower_names = list(cols.values())
+
+    def get_col(df, wanted: List[str], fallback_index: int):
+        for i, name in enumerate(df.columns):
+            low = str(name).strip().lower()
+            if low in wanted:
+                return name
+        # fallback by position
+        return df.columns[fallback_index]
+
+    col_type = get_col(df,
+                       ["question type", "type", "category", "topic", "column a"],
+                       0)
+    col_q = get_col(df,
+                    ["question", "ques", "column b"],
+                    1)
+    col_a = get_col(df, ["option a", "a", "column c"], 2)
+    col_b = get_col(df, ["option b", "b", "column d"], 3)
+    col_c = get_col(df, ["option c", "c", "column e"], 4)
+    col_d = get_col(df, ["option d", "d", "column f"], 5)
+    col_e = get_col(df, ["option e", "e", "column g"], 6)
+    col_ans = get_col(df, ["answer", "ans", "correct", "column j"], 9)
+
+    renamed = df.rename(columns={
+        col_type: "type",
+        col_q: "question",
+        col_a: "A",
+        col_b: "B",
+        col_c: "C",
+        col_d: "D",
+        col_e: "E",
+        col_ans: "answer"
+    }).copy()
+
+    # Clean strings
+    for c in ["type", "question", "A", "B", "C", "D", "E", "answer"]:
+        if c in renamed.columns:
+            renamed[c] = renamed[c].astype(str).fillna("").str.strip()
+
+    # Drop rows without a question
+    renamed = renamed[renamed["question"].str.len() > 0]
+    renamed.reset_index(drop=True, inplace=True)
+    return renamed
+
+def load_bank() -> pd.DataFrame:
+    if not DATA_FILE.exists():
+        raise FileNotFoundError(f"Excel file not found at {DATA_FILE}.")
+    df = pd.read_excel(DATA_FILE, engine="openpyxl")
+    df = _normalize_columns(df)
+    return df
+
+BANK = load_bank()
+
+def get_types() -> List[str]:
+    types = sorted([t for t in BANK["type"].dropna().unique() if str(t).strip() not in ("", "nan")])
+    return types
+
+# -----------------------------
+# Helper logic
+# -----------------------------
+def select_questions(qtype: str, n: int = 10) -> List[int]:
+    subset = BANK[BANK["type"] == qtype]
+    idxs = subset.index.tolist()
+    random.shuffle(idxs)
+    if not idxs:
+        return []
+    return idxs[: min(n, len(idxs))]
+
+def evaluate(answers: Dict[str, str], question_ids: List[int]) -> Dict[str, Any]:
+    results = []
+    score = 0
+    for qid in question_ids:
+        row = BANK.loc[qid]
+        # user_answer is one of "A".."E" or "" (if unanswered)
+        user_choice_letter = answers.get(str(qid), "")
+        correct_field = str(row["answer"]).strip()
+
+        # We accept either the letter (A..E) or the exact text of the correct option.
+        options_map = {"A": row["A"], "B": row["B"], "C": row["C"], "D": row["D"], "E": row["E"]}
+
+        # Determine correct letter if possible
+        correct_letter = None
+        up = correct_field.upper().strip()
+        if up in options_map:  # "A" / "B"..
+            correct_letter = up
+        else:
+            # Try to match by text
+            for k, v in options_map.items():
+                if str(v).strip().lower() == correct_field.lower():
+                    correct_letter = k
+                    break
+
+        # Fallback: if nothing matched, mark as unknown and don't award score
+        is_correct = False
+        if correct_letter:
+            is_correct = (user_choice_letter == correct_letter)
+            if is_correct:
+                score += 1
+
+        results.append({
+            "id": qid,
+            "type": row["type"],
+            "question": row["question"],
+            "options": options_map,
+            "user_letter": user_choice_letter or "-",
+            "user_text": options_map.get(user_choice_letter, "") if user_choice_letter else "",
+            "correct_letter": correct_letter or "?",
+            "correct_text": options_map.get(correct_letter, "") if correct_letter else str(row["answer"]),
+            "is_correct": is_correct
+        })
+    return {"score": score, "results": results, "total": len(question_ids)}
+
+# -----------------------------
+# Routes
+# -----------------------------
+@app.get("/", response_class=HTMLResponse)
+async def home(request: Request):
+    return templates.TemplateResponse("index.html", {
+        "request": request,
+        "types": get_types(),
     })
 
-app = FastAPI()
+@app.post("/start", response_class=HTMLResponse)
+async def start_test(request: Request, qtype: str = Form(...)):
+    question_ids = select_questions(qtype, n=10)
+    # Save to session for "retake same test"
+    request.session["last_qtype"] = qtype
+    request.session["last_question_ids"] = question_ids
+    return templates.TemplateResponse("quiz.html", {
+        "request": request,
+        "qtype": qtype,
+        "questions": [(qid, BANK.loc[qid]) for qid in question_ids],
+    })
 
-# Same-origin (static page + API on the same Vercel domain). CORS open as a convenience.
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # you can lock this down later
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+@app.post("/retake", response_class=HTMLResponse)
+async def retake_test(request: Request):
+    last_ids = request.session.get("last_question_ids", [])
+    qtype = request.session.get("last_qtype", "")
+    if not last_ids:
+        # If no session, send to home
+        return RedirectResponse(url="/", status_code=303)
+    return templates.TemplateResponse("quiz.html", {
+        "request": request,
+        "qtype": qtype or "Retake",
+        "questions": [(qid, BANK.loc[qid]) for qid in last_ids],
+    })
 
-def pick_questions(n=10):
-    n = min(n, len(QUESTION_BANK))
-    return random.sample(QUESTION_BANK, n)
+@app.post("/submit", response_class=HTMLResponse)
+async def submit(
+    request: Request,
+    duration: str = Form(...),  # "mm:ss" from JS timer
+):
+    # Collect answers (keys are question IDs)
+    form = await request.form()
+    answers = {k: v for k, v in form.items() if k.isdigit()}  # only qid fields
+    # Retrieve current set from session (either fresh or retake)
+    question_ids = request.session.get("last_question_ids", [])
+    res = evaluate(answers, question_ids)
+    qtype = request.session.get("last_qtype", "")
 
-@app.get("/api/health")
-def health():
-    return {"ok": True}
+    return templates.TemplateResponse("results.html", {
+        "request": request,
+        "score": res["score"],
+        "total": res["total"],
+        "duration": duration,
+        "qtype": qtype,
+        "review": res["results"],
+    })
 
-@app.get("/api/start")
-def start_quiz(n: int = 10):
-    """
-    Returns 10 random questions by default.
-    Only send id/question/options; keep correct answers server-side.
-    """
-    selected = pick_questions(n)
-    questions = []
-    for q in selected:
-        questions.append({
-            "id": q["id"],
-            "question": q["question"],
-            "options": q["options"],  # {A,B,C,D,E}
-        })
-    # quiz_id is not strictly needed (stateless scoring), but returned for future extension
-    return {"quiz_id": "stateless", "total": len(questions), "questions": questions}
-
-class SubmitPayload(BaseModel):
-    quiz_id: str
-    answers: dict  # {question_id: "A"/"B"/"C"/"D"/"E"}
-
-@app.post("/api/submit")
-def submit(payload: SubmitPayload):
-    id_to_q = {q["id"]: q for q in QUESTION_BANK}
-    details = []
-    correct_count = 0
-
-    for qid, user_choice in payload.answers.items():
-        q = id_to_q.get(str(qid))
-        if not q:
-            continue
-        correct_letter = q["answer"]
-        is_correct = user_choice.upper() == correct_letter
-        if is_correct:
-            correct_count += 1
-        details.append({
-            "id": qid,
-            "question": q["question"],
-            "your_answer": user_choice.upper(),
-            "correct_answer": correct_letter,
-            "is_correct": is_correct,
-            "options": q["options"],
-        })
-
-    total = len(payload.answers)
-    score = correct_count  # 1 point per correct
-    wrong = total - correct_count
-    return {
-        "score": score,
-        "total": total,
-        "correct": correct_count,
-        "wrong": wrong,
-        "details": details
-    }
+@app.get("/health")
+async def health():
+    return {"ok": True, "total_questions": len(BANK), "types": get_types()}
